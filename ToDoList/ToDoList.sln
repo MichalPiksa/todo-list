@@ -5,7 +5,7 @@ VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToDoList", "ToDoList\ToDoList.csproj", "{F87878D5-6B7C-45E2-8798-08207441AAFC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAPI", "WebAPI\WebAPI.csproj", "{37F8E136-7A67-4FF4-8CB2-B08FC06184D9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToDoList.WebAPI", "ToDoList.WebAPI\ToDoList.WebAPI.csproj", "{37F8E136-7A67-4FF4-8CB2-B08FC06184D9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToDoListApp.Tests", "ToDoList.Tests\ToDoListApp.Tests.csproj", "{5A95093A-CC14-41D0-A4C1-AD3091F13940}"
 EndProject
