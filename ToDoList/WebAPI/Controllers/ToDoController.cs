@@ -1,4 +1,5 @@
 ﻿using System.Xml.Linq;
+using Marten;
 using Microsoft.AspNetCore.Mvc;
 using ToDoListApp;
 
@@ -8,36 +9,39 @@ namespace WebAPI.Controllers
     [Route("/todo")]
     public class ToDoController : ControllerBase
     {
-        public ToDoController()
+        private readonly IDocumentSession _documentSession;
+        public ToDoController(IDocumentSession documentSession)
         {
+            _documentSession = documentSession;
         }
 
-        public static List<ToDoItem> _toDoItems = new List<ToDoItem>
-        {
-            new ToDoItem()
-            {
-                Id = Guid.NewGuid(),
-                Name = "TestPast",
-                Deadline = DateTime.UtcNow,
-                Description = "Description1",
-                ToDoStatus = Status.Done
-            },
-            new ToDoItem()
-            {
-                Id = Guid.NewGuid(),
-                Name = "TestFuture",
-                Deadline = DateTime.UtcNow.AddDays(2),
-                Description = "Description2",
-                ToDoStatus = Status.New
-            }
-        };
+        // public static List<ToDoItem> _toDoItems = new List<ToDoItem>
+        // {
+        //     new ToDoItem()
+        //     {
+        //         Id = Guid.NewGuid(),
+        //         Name = "TestPast",
+        //         Deadline = DateTime.UtcNow,
+        //         Description = "Description1",
+        //         ToDoStatus = Status.Done
+        //     },
+        //     new ToDoItem()
+        //     {
+        //         Id = Guid.NewGuid(),
+        //         Name = "TestFuture",
+        //         Deadline = DateTime.UtcNow.AddDays(2),
+        //         Description = "Description2",
+        //         ToDoStatus = Status.New
+        //     }
+        // };
 
         [HttpGet(Name = "FilterTodos")]
-        public ActionResult<IEnumerable<ToDoItem>> GetTodosFilter(string? filter)
+        public async Task<ActionResult<IEnumerable<ToDoItem>>> GetTodosFilter(string? filter)
         {
+            var todos = await _documentSession.Query<ToDoItem>().ToListAsync();
             if (filter == "nearestTodo")
             {
-                var nearestTodo = _toDoItems
+                var nearestTodo = todos
                     .Where(x => x.Deadline > DateTime.UtcNow)
                     .OrderBy(x => x.Deadline)
                     .FirstOrDefault();
@@ -45,17 +49,17 @@ namespace WebAPI.Controllers
             }
             else if (filter == "allPassedTodos")
             {
-                var allPassedTodos = _toDoItems
+                var allPassedTodos = todos
                     .Where(x => x.Deadline < DateTime.UtcNow);
                 return Ok(allPassedTodos);
             }
             else if (filter == "AllTodos")
             {
-                return Ok(_toDoItems);
+                return Ok(todos);
             }
             else if (filter == "todayDeadlineTodos")
             {
-                var todayDeadlineTodos = _toDoItems
+                var todayDeadlineTodos = todos
                     .Where(x => x.Deadline == DateTime.UtcNow.Date)
                     .Where(x => x.Deadline < DateTime.Today.AddDays(1));
                 return Ok(todayDeadlineTodos);
@@ -63,33 +67,50 @@ namespace WebAPI.Controllers
             else if (filter == "actualWeekTasks") 
             {
                 var restDaysTillEndOfWeek = DayOfWeek.Saturday + 1 - DateTime.Today.DayOfWeek;
-                var actualWeekTasks = _toDoItems
+                var actualWeekTasks = todos
                     .Where(x => x.Deadline > DateTime.UtcNow)
                     .Where(x => x.Deadline < DateTime.Today
                     .AddDays(restDaysTillEndOfWeek));
                 return Ok(actualWeekTasks);
             }
-            var actualTodos = _toDoItems.Where(x => x.Deadline > DateTime.Now);
+            var actualTodos = todos.Where(x => x.Deadline > DateTime.Now);
             return Ok(actualTodos);
         }
 
         [HttpPost(Name = "AddTodo")]
-        public IActionResult PostTodo([FromBody] ToDoItem item)
+        public async Task<IActionResult> PostTodo([FromBody] ToDoItem item)
         {
             if (item.Deadline <= DateTime.UtcNow)
             {
                 return BadRequest("Due date must be in the future.");
             }
+            if (item == null || string.IsNullOrEmpty(item.Name) || string.IsNullOrEmpty(item.Deadline.ToString()))
+            {
+                return BadRequest("Invalid todo item data.");
+            }
             if (item.Id == Guid.Empty)
             {
                 item.Id = Guid.NewGuid();
             }
-            //if (item.ToDoStatus != Status.New || item.ToDoStatus == null)
-            //{
-            //    item.ToDoStatus = Status.New;
-            //}
-            _toDoItems.Add(item);
-            return CreatedAtAction(nameof(GetTodosFilter), new {id = item.Id}, item);
+
+            var todo = new ToDoItem()
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Deadline = item.Deadline,
+                Description = item.Description,
+                ToDoStatus = Status.New
+            };
+            try
+            {
+                _documentSession.Store(todo);
+                await _documentSession.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while saving the todo item.");
+            }
+            return CreatedAtAction(nameof(PostTodo), new {id = item.Id}, item);
         }
     }
 }

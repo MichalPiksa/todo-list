@@ -1,5 +1,5 @@
-
 using FluentValidation;
+using Marten;
 using ToDoListApp;
 using WebAPI.Controllers;
 using WebAPI.Validations;
@@ -28,6 +28,11 @@ namespace WebAPI
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+            
+            builder.Services.AddMarten(options =>
+            {
+                options.Connection(builder.Configuration.GetConnectionString("DefaultConnection"));
+            });
 
             var app = builder.Build();
 
